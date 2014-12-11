@@ -1,6 +1,6 @@
 'use strict';
 
-var easingTypes = require('./easingTypes');
+var easingTypes = require('./easingTypes.js');
 
 // additive is the new iOS 8 default. In most cases it simulates a physics-
 // looking overshoot behavior (especially with easeInOut. You can test that in

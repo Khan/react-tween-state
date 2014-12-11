@@ -1,6 +1,6 @@
 'use strict';
 
-var springEaseGen = require("./spring");
+var springEaseGen = require("./spring.js");
 
 var easingTypes = {
   // t: current time, b: beginning value, c: change in value, d: duration
