@@ -1,6 +1,8 @@
 !function(e){if("object"==typeof exports&&"undefined"!=typeof module)module.exports=e();else if("function"==typeof define&&define.amd)define([],e);else{var f;"undefined"!=typeof window?f=window:"undefined"!=typeof global?f=global:"undefined"!=typeof self&&(f=self),f.tweenState=e()}}(function(){var define,module,exports;return (function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof require=="function"&&require;if(!u&&a)return a(o,!0);if(i)return i(o,!0);var f=new Error("Cannot find module '"+o+"'");throw f.code="MODULE_NOT_FOUND",f}var l=n[o]={exports:{}};t[o][0].call(l.exports,function(e){var n=t[o][1][e];return s(n?n:e)},l,l.exports,e,t,n,r)}return n[o].exports}var i=typeof require=="function"&&require;for(var o=0;o<r.length;o++)s(r[o]);return s})({1:[function(require,module,exports){
 'use strict';
 
+var springEaseGen = require("./spring");
+
 var easingTypes = {
   // t: current time, b: beginning value, c: change in value, d: duration
 
@@ -86,7 +88,8 @@ var easingTypes = {
     var c = _c - b;
     if (t < d/2) return easingTypes.easeInBounce (t*2, 0, c, d) * .5 + b;
     return easingTypes.easeOutBounce (t*2-d, 0, c, d) * .5 + c*.5 + b;
-  }
+  },
+  iosDefaultSpring: springEaseGen(1000, 3, 500)
 };
 
 module.exports = easingTypes;
@@ -124,7 +127,7 @@ module.exports = easingTypes;
  *
  */
 
-},{}],2:[function(require,module,exports){
+},{"./spring":3}],2:[function(require,module,exports){
 'use strict';
 
 var easingTypes = require('./easingTypes');
@@ -300,5 +303,70 @@ tweenState.Mixin = {
 
 module.exports = tweenState;
 
-},{"./easingTypes":1}]},{},[2])(2)
+},{"./easingTypes":1}],3:[function(require,module,exports){
+var epsilon = 0.0001;
+
+// Find the converging point of a decreasing function.
+// TODO(zach): use newton's method
+var convergentDomain = function(fn, threshold) {
+    var i = 0;
+    var x = fn(i);
+    var oldX;
+    for(i = 1; true; i++) {
+        oldX = x;
+        x = fn(i);
+        if (oldX - x < threshold) {
+            break;
+        }
+    }
+    return i;
+};
+
+var springEaseGen = function(stiffness, mass, damping) {
+    var k = stiffness;
+    var m = mass;
+    var c = damping;
+
+    var omega = Math.sqrt(k/m);
+    var zeta = c / (2 * Math.sqrt(m*k));
+
+    var quadTmp = Math.sqrt(Math.pow(c, 2) - 4 * Math.pow(omega, 2));
+    var gammaPlus = 0.5 * (-c + quadTmp);
+    var gammaMinus = 0.5 * (-c - quadTmp);
+
+    var displacementFunc;
+    if (zeta - 1 < epsilon) {
+        displacementFunc = function(x0, v0, t) {
+            var A = x0;
+            var B = v0 + omega * x0;
+
+            return (A + B * t) * Math.exp(-omega * t);
+        };
+    } else if (zeta > 1) {
+        displacementFunc = function(x0, v0, t) {
+            var A = x0 + (gammaPlus * x0 - v0) / (gammaMinus - gammaPlus);
+            var B = -1 * (gammaPlus * x0 - v0) / (gammaMinus - gammaPlus);
+
+            return A * Math.exp(gammaPlus * t) + B * Math.exp(gammaMinus * t);
+        };
+    } else {
+        throw "underdamping not implemented";
+    }
+
+    var totalTime = convergentDomain(displacementFunc.bind(null, 1, 0), 0.001);
+    var normSpringEase = function(t) {
+        t *= totalTime;
+        return 1 - x(t);
+    };
+
+    return function springEase(t, b, _c, d) {
+        var normT = t / d;
+        var c = _c - b;
+        return normSpringEase(normT) * c + b;
+    };
+};
+
+module.exports = springEaseGen;
+
+},{}]},{},[2])(2)
 });

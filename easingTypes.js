@@ -1,5 +1,7 @@
 'use strict';
 
+var springEaseGen = require("./spring");
+
 var easingTypes = {
   // t: current time, b: beginning value, c: change in value, d: duration
 
@@ -85,9 +87,11 @@ var easingTypes = {
     var c = _c - b;
     if (t < d/2) return easingTypes.easeInBounce (t*2, 0, c, d) * .5 + b;
     return easingTypes.easeOutBounce (t*2-d, 0, c, d) * .5 + c*.5 + b;
-  }
+  },
+  iosDefaultSpring: springEaseGen(1000, 3, 500)
 };
 
+window.ET = easingTypes;
 module.exports = easingTypes;
 
 /*
